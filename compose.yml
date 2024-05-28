@@ -1,0 +1,52 @@
+---
+networks:
+  elastic:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.251.0/24"
+
+services: 
+    elastic:
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.21
+        container_name: elastic
+        environment:
+            - node.name=elastic
+            - cluster.name=es-docker-cluster
+            - discovery.type=single-node
+            - ES_JAVA_OPTS=-Xmx256m -Xms256m
+        volumes:
+            - ./es_data:/usr/share/elasticsearch/data
+        ports:
+            - 9200:9200
+            - 9300:9300
+        networks:
+          - elastic
+        restart: always
+    
+    kibana:
+        image: docker.elastic.co/kibana/kibana:7.17.21
+        container_name: kibana
+        environment:
+            - node.name=kibana
+            - cluster.name=es-docker-cluster
+            - ELASTICSEARCH_HOSTS=http://elastic:9200
+        ports:
+            - 5601:5601
+        networks:
+          - elastic
+        restart: always
+        depends_on:
+          - elastic
+
+    nginx-beats: 
+        build: ./nginx/
+        container_name: nginx-beats
+        restart: always
+        networks:
+          - elastic
+        ports:
+          - 8080:80
+
+volumes:
+  es_data:
